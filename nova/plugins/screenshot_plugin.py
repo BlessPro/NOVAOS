@@ -14,6 +14,6 @@ def parse_screenshot_intent(text: str) -> Optional[Dict]:
         "screenshot",
         "screen shot",
     }
-    if t in variants:
+    if t in variants or "screenshot" in t or "screen shot" in t or "capture screen" in t:
         return build_action("screenshot", {"mode": "full", "destination": "file"})
     return None

@@ -5,42 +5,54 @@ from common import build_action
 
 
 def _clean_payload(text: str) -> str:
-    return re.sub(r"\s+", " ", text).strip(" .,!?:;")
+    cleaned = re.sub(r"\s+", " ", text).strip(" .,!?:;")
+    cleaned = re.sub(r"\b(?:for me|please|now)$", "", cleaned).strip(" .,!?:;")
+    return cleaned
+
+
+def _trim_at_connectors(text: str) -> str:
+    return re.split(r"\b(?:and|then|after|also|while)\b", text, maxsplit=1)[0].strip()
 
 
 def parse_system_intent(text: str) -> Optional[Dict]:
     t = text.strip().lower()
 
-    m = re.fullmatch(
-        r"(?:open|launch|start|run)\s+(?:the\s+)?(?:app\s+)?(.+?)(?:\s+for\s+me)?",
+    m = re.search(
+        r"\b(?:open|launch|start|run)\b(?:\s+the)?(?:\s+app)?\s+(.+)",
         t,
     )
     if m:
-        return build_action("open_app", {"name": _clean_payload(m.group(1))})
+        name = _clean_payload(_trim_at_connectors(m.group(1)))
+        if name:
+            return build_action("open_app", {"name": name})
 
-    m = re.fullmatch(
-        r"(?:switch\s+to|focus(?:\s+on)?|go\s+to|bring\s+up)\s+(.+?)(?:\s+for\s+me)?",
+    m = re.search(
+        r"\b(?:switch\s+to|focus(?:\s+on)?|go\s+to|bring\s+up)\b\s+(.+)",
         t,
     )
     if m:
-        return build_action("focus_app", {"name": _clean_payload(m.group(1))})
+        name = _clean_payload(_trim_at_connectors(m.group(1)))
+        if name:
+            return build_action("focus_app", {"name": name})
 
-    if re.fullmatch(r"(?:close|exit|dismiss)\s+(?:this\s+|the\s+)?window", t):
+    if re.search(r"\b(?:close|exit|dismiss)\b.*\bwindow\b", t):
         return build_action("close_window", {})
 
-    if re.fullmatch(r"(?:close|exit)\s+.+", t):
+    if re.search(r"\b(?:close|exit)\b", t):
         # V0.1 supports only closing current window, not app-by-name close.
         return build_action("close_window", {})
 
-    m = re.fullmatch(r"(?:type|write|enter)\s+(.+)", text.strip(), re.IGNORECASE)
+    m = re.search(r"\b(?:type|write|enter)\b\s+(.+)", text.strip(), re.IGNORECASE)
     if m:
-        return build_action("type_text", {"text": _clean_payload(m.group(1))})
+        typed = _clean_payload(_trim_at_connectors(m.group(1)))
+        if typed:
+            return build_action("type_text", {"text": typed})
 
-    if re.fullmatch(r"(?:volume\s+up|increase\s+volume|turn\s+volume\s+up)", t):
+    if re.search(r"\b(?:volume\s+up|increase\s+volume|turn\s+volume\s+up)\b", t):
         return build_action("volume", {"action": "up"})
-    if re.fullmatch(r"(?:volume\s+down|decrease\s+volume|turn\s+volume\s+down)", t):
+    if re.search(r"\b(?:volume\s+down|decrease\s+volume|turn\s+volume\s+down)\b", t):
         return build_action("volume", {"action": "down"})
-    if re.fullmatch(r"(?:mute|volume\s+mute|turn\s+volume\s+off)", t):
+    if re.search(r"\b(?:mute|volume\s+mute|turn\s+volume\s+off)\b", t):
         return build_action("volume", {"action": "mute"})
 
     return None
