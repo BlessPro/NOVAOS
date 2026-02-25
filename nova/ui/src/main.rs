@@ -9,6 +9,7 @@ use nova_core::config;
 use nova_core::dispatcher;
 use nova_core::onboarding;
 use nova_core::plugin_bridge::PluginBridge;
+use nova_core::session::{resolve_session_action, SessionContext};
 use nova_core::speech;
 use nova_core::stt::{PythonStt, SttEngine};
 use nova_core::{build_adapter, resolve_python_cmd};
@@ -56,11 +57,13 @@ const EXAMPLE_PHRASES: &[(&str, &[&str])] = &[
 enum EngineEvent {
     Status(String),
     Log(String),
+    Session(String),
     Error(String),
 }
 
 struct NovaUiApp {
     status: String,
+    session_summary: String,
     logs: Vec<String>,
     running: bool,
     stop_flag: Arc<AtomicBool>,
@@ -74,6 +77,7 @@ impl NovaUiApp {
         let (tx, rx) = mpsc::channel();
         Self {
             status: "Idle".to_string(),
+            session_summary: "last_action=none; pending_slot=none; entities=[none]".to_string(),
             logs: vec!["Nova UI ready.".to_string()],
             running: false,
             stop_flag: Arc::new(AtomicBool::new(false)),
@@ -151,7 +155,9 @@ fn run_engine_loop(stop: Arc<AtomicBool>, tx: Sender<EngineEvent>) -> Result<()>
         cfg.llm_timeout_ms,
     );
     let adapter = build_adapter(&root, &cfg)?;
+    let mut session = SessionContext::new(std::time::Duration::from_secs(90));
     send_status(&tx, "Idle");
+    let _ = tx.send(EngineEvent::Session(session.summary()));
     send_log(
         &tx,
         format!("Engine running. Hold {} to issue voice commands.", cfg.hotkey),
@@ -169,12 +175,15 @@ fn run_engine_loop(stop: Arc<AtomicBool>, tx: Sender<EngineEvent>) -> Result<()>
             send_status(&tx, "Idle");
             continue;
         }
+        session.add_transcript(&transcript);
+        let _ = tx.send(EngineEvent::Session(session.summary()));
         send_log(&tx, format!("Heard: {}", transcript));
 
         send_status(&tx, "Processing");
         let mut action = bridge
-            .parse_transcript(&transcript)
+            .parse_transcript(&transcript, session.context_for_parser())
             .context("Failed to parse transcript via plugins")?;
+        action = resolve_session_action(&mut session, action);
         send_log(&tx, format!("Action: {}", action.action_type));
 
         while action.action_type == "clarify" && !stop.load(Ordering::SeqCst) {
@@ -192,9 +201,11 @@ fn run_engine_loop(stop: Arc<AtomicBool>, tx: Sender<EngineEvent>) -> Result<()>
             if stop.load(Ordering::SeqCst) {
                 break;
             }
+            session.add_transcript(&retry);
             action = bridge
-                .parse_transcript(&retry)
+                .parse_transcript(&retry, session.context_for_parser())
                 .context("Clarify parse failed")?;
+            action = resolve_session_action(&mut session, action);
         }
 
         if stop.load(Ordering::SeqCst) {
@@ -202,7 +213,11 @@ fn run_engine_loop(stop: Arc<AtomicBool>, tx: Sender<EngineEvent>) -> Result<()>
         }
 
         match dispatcher::dispatch(adapter.as_ref(), &action) {
-            Ok(_) => send_log(&tx, format!("Executed: {}", action.action_type)),
+            Ok(_) => {
+                send_log(&tx, format!("Executed: {}", action.action_type));
+                session.remember_action(&action);
+                let _ = tx.send(EngineEvent::Session(session.summary()));
+            }
             Err(e) => send_log(&tx, format!("Action failed: {e}")),
         }
         send_status(&tx, "Idle");
@@ -222,6 +237,7 @@ impl eframe::App for NovaUiApp {
                     }
                 }
                 EngineEvent::Log(l) => self.push_log(l),
+                EngineEvent::Session(s) => self.session_summary = s,
                 EngineEvent::Error(e) => {
                     self.status = "Error".to_string();
                     self.running = false;
@@ -251,6 +267,12 @@ impl eframe::App for NovaUiApp {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
+            egui::CollapsingHeader::new("Session Context")
+                .default_open(true)
+                .show(ui, |ui| {
+                    ui.monospace(&self.session_summary);
+                });
+            ui.separator();
             egui::CollapsingHeader::new("Example Phrases")
                 .default_open(true)
                 .show(ui, |ui| {

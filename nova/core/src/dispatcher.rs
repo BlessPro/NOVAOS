@@ -87,6 +87,9 @@ pub fn dispatch(adapter: &dyn OsAdapter, action: &Action) -> Result<()> {
             adapter.volume(va)
         }
         "clarify" => Ok(()),
+        "reference" | "correction" | "spelling_update" | "confirm" => {
+            Err(anyhow!("Session intent reached dispatcher without resolution"))
+        }
         x => Err(anyhow!("Unhandled action type: {x}")),
     }
 }

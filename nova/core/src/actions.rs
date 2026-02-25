@@ -32,6 +32,10 @@ impl Action {
             "screenshot",
             "volume",
             "clarify",
+            "reference",
+            "correction",
+            "spelling_update",
+            "confirm",
         ];
 
         if !allowed.contains(&self.action_type.as_str()) {

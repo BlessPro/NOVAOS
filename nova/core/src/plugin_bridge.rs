@@ -35,7 +35,7 @@ impl PluginBridge {
         }
     }
 
-    pub fn parse_transcript(&self, transcript: &str) -> Result<Action> {
+    pub fn parse_transcript(&self, transcript: &str, extra_context: serde_json::Value) -> Result<Action> {
         let payload = serde_json::json!({
             "transcript": transcript,
             "context": {
@@ -43,6 +43,7 @@ impl PluginBridge {
                 "llm_backend": self.llm_backend,
                 "llm_model": self.llm_model,
                 "llm_timeout_ms": self.llm_timeout_ms,
+                "session": extra_context,
             }
         });
 

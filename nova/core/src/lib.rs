@@ -4,6 +4,7 @@ pub mod config;
 pub mod dispatcher;
 pub mod onboarding;
 pub mod plugin_bridge;
+pub mod session;
 pub mod speech;
 pub mod stt;
 

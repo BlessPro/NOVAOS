@@ -23,6 +23,10 @@ def validate_action(action: Dict[str, Any]) -> Dict[str, Any]:
         "screenshot",
         "volume",
         "clarify",
+        "reference",
+        "correction",
+        "spelling_update",
+        "confirm",
     }
     if action.get("version") != ACTION_VERSION:
         raise ValueError("invalid action version")

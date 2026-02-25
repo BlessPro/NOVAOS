@@ -1,5 +1,6 @@
 from common import clarify, read_stdin_json, validate_action, write_stdout_json
 from browser_plugin import parse_browser_intent
+from correction_plugin import parse_correction_intent
 from llm_plugin import parse_with_llm
 from screenshot_plugin import parse_screenshot_intent
 from system_plugin import parse_system_intent
@@ -47,6 +48,11 @@ def parse(transcript: str, context: dict):
     llm_timeout_ms = int(context.get("llm_timeout_ms", 12000))
 
     normalized = _normalize_transcript(transcript)
+
+    correction_action = parse_correction_intent(normalized, context)
+    if correction_action is not None:
+        return correction_action
+
     if parser_mode in {"rule", "hybrid"}:
         action = _parse_rules(normalized) or _parse_rules(transcript)
         if action is not None:
