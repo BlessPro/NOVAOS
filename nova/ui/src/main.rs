@@ -13,6 +13,45 @@ use nova_core::speech;
 use nova_core::stt::{PythonStt, SttEngine};
 use nova_core::{build_adapter, resolve_python_cmd};
 
+const EXAMPLE_PHRASES: &[(&str, &[&str])] = &[
+    (
+        "Open / Focus",
+        &[
+            "open chrome",
+            "launch vscode",
+            "switch to chrome",
+            "bring up notepad",
+        ],
+    ),
+    (
+        "Typing / Window",
+        &[
+            "type hello world",
+            "write meeting starts at 5",
+            "close window",
+            "close explorer",
+        ],
+    ),
+    (
+        "Search",
+        &[
+            "search rust async tutorial",
+            "search youtube lofi beats",
+            "look up python regex on youtube",
+            "find best rust crates",
+        ],
+    ),
+    (
+        "Screenshot / Volume",
+        &[
+            "take a screenshot",
+            "capture screen",
+            "volume up",
+            "mute",
+        ],
+    ),
+];
+
 #[derive(Debug, Clone)]
 enum EngineEvent {
     Status(String),
@@ -212,6 +251,23 @@ impl eframe::App for NovaUiApp {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
+            egui::CollapsingHeader::new("Example Phrases")
+                .default_open(true)
+                .show(ui, |ui| {
+                    ui.label("Speak naturally. Nova maps intent to supported actions.");
+                    egui::ScrollArea::vertical()
+                        .max_height(170.0)
+                        .show(ui, |ui| {
+                            for (section, phrases) in EXAMPLE_PHRASES {
+                                ui.strong(*section);
+                                for phrase in *phrases {
+                                    ui.monospace(format!("- {}", phrase));
+                                }
+                                ui.add_space(6.0);
+                            }
+                        });
+                });
+            ui.separator();
             ui.heading("Logs");
             egui::ScrollArea::vertical()
                 .auto_shrink([false; 2])
