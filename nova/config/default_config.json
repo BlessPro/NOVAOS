@@ -1,0 +1,13 @@
+{
+  "version": "0.1",
+  "user_name": null,
+  "hotkey": "F8",
+  "python_cmd": "python",
+  "feedback_silent": true,
+  "screenshots_dir": "screenshots",
+  "app_index_file": "assets/app_index_seed.json",
+  "parser_mode": "hybrid",
+  "llm_backend": "ollama",
+  "llm_model": "llama3.1:8b",
+  "llm_timeout_ms": 12000
+}

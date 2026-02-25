@@ -1,0 +1,10 @@
+{
+  "apps": {
+    "chrome": "chrome",
+    "firefox": "firefox",
+    "vscode": "code",
+    "vs code": "code",
+    "notepad": "notepad",
+    "calculator": "calc"
+  }
+}

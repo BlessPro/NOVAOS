@@ -1,0 +1,17 @@
+# Rust
+**/target/
+**/*.rs.bk
+
+# Python
+**/.venv/
+**/__pycache__/
+**/*.pyc
+
+# Local config/state
+nova/config/config.json
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
