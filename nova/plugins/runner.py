@@ -5,6 +5,10 @@ from screenshot_plugin import parse_screenshot_intent
 from system_plugin import parse_system_intent
 
 
+def _normalize_tokens(text: str) -> str:
+    return " ".join(text.split())
+
+
 def _normalize_transcript(transcript: str) -> str:
     # Drop filler words while preserving command payload words.
     filler = {
@@ -17,10 +21,14 @@ def _normalize_transcript(transcript: str) -> str:
         "just",
         "hey",
         "nova",
+        "now",
     }
-    tokens = transcript.strip().lower().split()
-    cleaned = [t for t in tokens if t not in filler]
-    return " ".join(cleaned).strip() or transcript.strip()
+    t = transcript.strip().lower()
+    t = t.replace("screen shot", "screenshot")
+    t = t.replace("vs code", "vscode")
+    tokens = [tok.strip(".,!?;:") for tok in t.split()]
+    cleaned = [tok for tok in tokens if tok and tok not in filler]
+    return _normalize_tokens(" ".join(cleaned)).strip() or transcript.strip()
 
 
 def _parse_rules(transcript: str):

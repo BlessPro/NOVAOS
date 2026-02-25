@@ -46,19 +46,30 @@ pub fn resolve_python_cmd(root: &std::path::Path, configured: &str) -> String {
             .unwrap_or(false)
     };
 
-    let configured_ok = configured.contains(std::path::MAIN_SEPARATOR) || command_exists(configured);
-    if configured_ok {
-        return configured.to_string();
-    }
-
     #[cfg(target_os = "windows")]
     let venv_python = root.join(".venv").join("Scripts").join("python.exe");
     #[cfg(not(target_os = "windows"))]
     let venv_python = root.join(".venv").join("bin").join("python");
 
+    let configured_trimmed = configured.trim();
+    let configured_lower = configured_trimmed.to_lowercase();
+    let is_generic_python = matches!(configured_lower.as_str(), "python" | "python3");
+    if is_generic_python && venv_python.exists() {
+        return venv_python.to_string_lossy().to_string();
+    }
+
+    let configured_ok = if configured_trimmed.contains(std::path::MAIN_SEPARATOR) {
+        std::path::Path::new(configured_trimmed).exists()
+    } else {
+        command_exists(configured_trimmed)
+    };
+    if configured_ok {
+        return configured_trimmed.to_string();
+    }
+
     if venv_python.exists() {
         return venv_python.to_string_lossy().to_string();
     }
 
-    configured.to_string()
+    configured_trimmed.to_string()
 }

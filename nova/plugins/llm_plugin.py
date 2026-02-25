@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 from typing import Any, Dict, Optional
@@ -43,12 +44,22 @@ def parse_with_llm(
     if backend != "ollama":
         return None
 
+    ollama_cmd = os.getenv("OLLAMA_BIN", "ollama")
+    if (
+        ollama_cmd == "ollama"
+        and os.name == "nt"
+        and os.path.exists(r"C:\Users\THINKTECH PC\AppData\Local\Programs\Ollama\ollama.exe")
+    ):
+        ollama_cmd = r"C:\Users\THINKTECH PC\AppData\Local\Programs\Ollama\ollama.exe"
+
     prompt = _build_prompt(transcript)
     try:
         proc = subprocess.run(
-            ["ollama", "run", model, prompt],
+            [ollama_cmd, "run", model, prompt],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=max(2, int(timeout_ms / 1000)),
             check=False,
         )
